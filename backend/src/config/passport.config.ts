@@ -1,7 +1,8 @@
-import passport, { session } from "passport";
+import passport from "passport";
 import { Request } from "express";
-import { Strategy as GoogleStragegy } from "passport-google-oauth20";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Strategy as LocalStrategy } from "passport-local";
+
 import { config } from "./app.config";
 import { NotFoundException } from "../utils/appError";
 import { ProviderEnum } from "../enums/acount-provider.enum";
@@ -11,7 +12,7 @@ import {
 } from "../services/auth.service";
 
 passport.use(
-  new GoogleStragegy(
+  new GoogleStrategy(
     {
       clientID: config.GOOGLE_CLIENT_ID,
       clientSecret: config.GOOGLE_CLIENT_SECRET,
@@ -19,13 +20,13 @@ passport.use(
       scope: ["profile", "email"],
       passReqToCallback: true,
     },
-    async (req: Request, asscessToken, refreshToken, profile, done) => {
+    async (req: Request, accessToken, refreshToken, profile, done) => {
       try {
         const { email, sub: googleId, picture } = profile._json;
         console.log(profile, "profile");
         console.log(googleId, "googleId");
         if (!googleId) {
-          throw new NotFoundException("Google Id (sub) is missing");
+          throw new NotFoundException("Google ID (sub) is missing");
         }
 
         const { user } = await loginOrCreateAccountService({
@@ -35,6 +36,7 @@ passport.use(
           picture: picture,
           email: email,
         });
+        done(null, user);
       } catch (error) {
         done(error, false);
       }

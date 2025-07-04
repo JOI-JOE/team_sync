@@ -27,7 +27,6 @@ authRoutes.get(
   passport.authenticate("google", {
     failureRedirect: failedUrl,
   }),
-  // google originalCallBack
   googleLoginCallback
 );
 
