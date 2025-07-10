@@ -128,7 +128,7 @@ export function WorkspaceSwitcher() {
                   </div>
                   {workspace.name}
 
-                  {workspace.id === workspaceId && (
+                  {workspace._id === workspaceId && (
                     <DropdownMenuShortcut className="tracking-normal !opacity-100">
                       <Check className="w-4 h-4" />
                     </DropdownMenuShortcut>

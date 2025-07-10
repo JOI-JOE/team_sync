@@ -1,14 +1,19 @@
 import { createContext, useContext, useEffect } from "react";
 import useAuth from "@/hooks/api/use-auth";
-import { UserType } from "@/types/api.type";
+import { UserType, WorkspaceType } from "@/types/api.type";
+import useWorkspaceId from "@/hooks/use-workspace-id";
+import useGetWorkspaceQuery from "@/hooks/api/use-get-workspace";
 
 // Define the context shape
 type AuthContextType = {
   user?: UserType;
+  workspace?: WorkspaceType;
   error: any;
   isLoading: boolean;
+  workspaceLoading: boolean;
   isFetching: boolean;
   refetchAuth: () => void;
+  refetchWorkspace: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -16,26 +21,44 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const workspaceId = useWorkspaceId();
+
   const {
     data: authData,
     error: authError,
-    isLoading: authLoading,
+    isLoading,
     isFetching,
     refetch: refetchAuth,
   } = useAuth();
 
   const user = authData?.user;
 
-  useEffect(() => {});
+  const {
+    data: workspaceData,
+    isLoading: workspaceLoading,
+    error: workspaceError,
+    refetch: refetchWorkspace,
+  } = useGetWorkspaceQuery(workspaceId);
+
+  const workspace = workspaceData?.workspace;
+
+  useEffect(() => {
+    // if (workspaceError) {
+    // if(workspaceError?.errorCode === "ASSE")
+    // }
+  });
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        error: authError,
-        isLoading: authLoading,
+        workspace,
+        error: authError || workspaceError,
         isFetching,
+        isLoading,
+        workspaceLoading,
         refetchAuth,
+        refetchWorkspace,
       }}
     >
       {children}

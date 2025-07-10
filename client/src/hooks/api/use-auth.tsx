@@ -1,6 +1,5 @@
 import { getCurrentUserQueryFn } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
-
 const useAuth = () => {
   const query = useQuery({
     queryKey: ["authUser"],
@@ -8,6 +7,7 @@ const useAuth = () => {
     staleTime: 0,
     retry: 2,
   });
+
   return query;
 };
 

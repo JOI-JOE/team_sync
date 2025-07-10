@@ -1,3 +1,4 @@
+import { CustomerError } from "@/types/customer-error.type";
 import axios from "axios";
 
 const baseURL = import.meta.env.VITE_API_BASE_URL;
@@ -16,12 +17,21 @@ API.interceptors.response.use(
   },
   async (error) => {
     const { data, status } = error.response;
+
+    if (data?.errorCode === "ACCESS_UNAUTHORIZED") {
+      window.location.href = "/";
+      return; // stop further processing of this error
+    }
+
     if (data === "Unauthorized" && status === 401) {
       window.location.href = "/";
     }
-    return Promise.reject({
-      ...data,
-    });
+
+    const customerError: CustomerError = {
+      ...error,
+      errroCode: data?.errorCode || "UNKNOWN_ERROR",
+    };
+    return Promise.reject(customerError);
   }
 );
 
