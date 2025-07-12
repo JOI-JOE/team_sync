@@ -201,12 +201,12 @@ export const deleteWorkspaceService = async (
     const workspace = await WorkspaceModel.findById(workspaceId).session(
       session
     );
-
     if (!workspace) {
-      throw new NotFoundException("workspace not found");
+      throw new NotFoundException("Workspace not found");
     }
 
-    if (workspace.owner.toString() !== userId) {
+    // Check if the user owns the workspace
+    if (!workspace.owner.equals(new mongoose.Types.ObjectId(userId))) {
       throw new BadRequestException(
         "You are not authorized to delete this workspace"
       );
@@ -220,17 +220,18 @@ export const deleteWorkspaceService = async (
     await ProjectModel.deleteMany({ workspace: workspace._id }).session(
       session
     );
-
     await TaskModel.deleteMany({ workspace: workspace._id }).session(session);
 
-    await MemberModel.deleteMany({ workspace: workspace._id }).session(session);
+    await MemberModel.deleteMany({
+      workspaceId: workspace._id,
+    }).session(session);
 
-    // Update the user's currentWorkspace if it matches the delete
+    // Update the user's currentWorkspace if it matches the deleted workspace
     if (user?.currentWorkspace?.equals(workspaceId)) {
       const memberWorkspace = await MemberModel.findOne({ userId }).session(
         session
       );
-
+      // Update the user's currentWorkspace
       user.currentWorkspace = memberWorkspace
         ? memberWorkspace.workspaceId
         : null;

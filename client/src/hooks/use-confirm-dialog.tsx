@@ -14,7 +14,7 @@ const useConfirmDialog = () => {
     setOpen(true);
   };
 
-  const onCloseDialog = () => {
+  const onCloseDialog = () => { 
     setContext(null);
     setOpen(false);
   };

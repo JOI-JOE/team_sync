@@ -9,9 +9,9 @@ const useCreateWorkspaceDialog = () => {
   const onOpen = () => setOpen(true);
   const onClose = () => setOpen(false);
   return {
-    open,
-    onOpen,
-    onClose,
+    open, // phụ thuộc vào url true/false
+    onOpen, // ép nó true
+    onClose, // ép nó false
   };
 };
 
