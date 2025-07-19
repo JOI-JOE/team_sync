@@ -33,6 +33,9 @@ import { Permissions } from "@/constant";
 import { useState } from "react";
 import useGetProjectsInWorkspaceQuery from "@/hooks/api/use-get-project";
 import { PaginationType } from "@/types/api.type";
+import { useMutation } from "@tanstack/react-query";
+import { deleteProjectMutationFn } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 
 export function NavProjects() {
   const navigate = useNavigate();
@@ -48,6 +51,10 @@ export function NavProjects() {
 
   const [pageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(5);
+
+  const { mutate, isPending: isLoading } = useMutation({
+    mutationFn: deleteProjectMutationFn,
+  });
 
   const { data, isPending, isFetching, isError } =
     useGetProjectsInWorkspaceQuery({
@@ -65,7 +72,25 @@ export function NavProjects() {
     setPageSize((prev) => prev + 5);
   };
 
-  const handleConfirm = () => {};
+  const handleConfirm = () => {
+    if (!context) return;
+    mutate(
+      {
+        workspaceId,
+        projectId: context?.id,
+      },
+      {
+        onSuccess: () => {},
+        onError: (error) => {
+          toast({
+            title: "Error",
+            description: error.message,
+            variant: "destructive",
+          });
+        },
+      }
+    );
+  };
   return (
     <>
       <SidebarGroup className="group-data-[collapsible=icon]:hidden">
