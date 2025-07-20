@@ -33,7 +33,7 @@ import { Permissions } from "@/constant";
 import { useState } from "react";
 import useGetProjectsInWorkspaceQuery from "@/hooks/api/use-get-project";
 import { PaginationType } from "@/types/api.type";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { deleteProjectMutationFn } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 
@@ -41,6 +41,7 @@ export function NavProjects() {
   const navigate = useNavigate();
   const location = useLocation();
   const pathname = location.pathname;
+  const queryClient = useQueryClient();
 
   const { onOpen } = useCreateProjectDialog();
   const { context, open, onOpenDialog, onCloseDialog } = useConfirmDialog();
@@ -77,10 +78,22 @@ export function NavProjects() {
     mutate(
       {
         workspaceId,
-        projectId: context?.id,
+        projectId: context?._id,
       },
       {
-        onSuccess: () => {},
+        onSuccess: (data) => {
+          queryClient.invalidateQueries({
+            queryKey: ["allProjects", workspaceId],
+          });
+          toast({
+            title: "Success",
+            description: data.message,
+            variant: "success",
+          });
+
+          navigate(`/workspace/${workspaceId}`);
+          setTimeout(() => onCloseDialog(), 100);
+        },
         onError: (error) => {
           toast({
             title: "Error",
@@ -163,7 +176,7 @@ export function NavProjects() {
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
-                          disabled={false}
+                          disabled={isLoading}
                           onClick={() => onOpenDialog(item)}
                         >
                           <Trash2 className="text-muted-foreground" />
@@ -194,7 +207,7 @@ export function NavProjects() {
 
       <ConfirmDialog
         isOpen={open}
-        isLoading={false}
+        isLoading={isLoading}
         onClose={onCloseDialog}
         onConfirm={handleConfirm}
         title="Delete Project"
