@@ -28,9 +28,19 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "../../ui/textarea";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
-import { transformOptions } from "@/lib/helper";
+import {
+  getAvatarColor,
+  getAvatarFallbackText,
+  transformOptions,
+} from "@/lib/helper";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import { TaskPriorityEnum, TaskStatusEnum } from "@/constant";
+import useGetProjectsInWorkspaceQuery from "@/hooks/api/use-get-project";
+import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
+import { Avatar, AvatarFallback, AvatarImage } from "@radix-ui/react-avatar";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createTaskMutationFn } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 
 export default function CreateTaskForm(props: {
   projectId?: string;
@@ -38,14 +48,54 @@ export default function CreateTaskForm(props: {
 }) {
   const { projectId, onClose } = props;
 
+  const queryClient = useQueryClient();
   const workspaceId = useWorkspaceId();
 
-  const isLoading = false;
+  const { mutate, isPending } = useMutation({
+    mutationFn: createTaskMutationFn,
+  });
 
-  //const projectOptions = []
+  const { data, isLoading } = useGetProjectsInWorkspaceQuery({
+    workspaceId,
+    skip: !!projectId,
+  });
+
+  const { data: memberData } = useGetWorkspaceMembers(workspaceId);
+
+  const projects = data?.projects || [];
+  const members = memberData?.members || [];
+
+  const projectOptions = projects?.map((project) => {
+    return {
+      label: (
+        <div className="flex items-center gap-1">
+          <span>{project.emoji}</span>
+          <span>{project.name}</span>
+        </div>
+      ),
+      value: project._id,
+    };
+  });
 
   // Workspace Memebers
-  //const membersOptions = []
+  const membersOptions = members?.map((member) => {
+    const name = member.userId?.name || "Unknown";
+    const initials = getAvatarFallbackText(name);
+    const avatarColor = getAvatarColor(name);
+
+    return {
+      label: (
+        <div className="flex items-center space-x-2">
+          <Avatar className="h-7 w-7">
+            <AvatarImage src={member.userId.profilePicture || ""} alt={name} />
+            <AvatarFallback className={avatarColor}>{initials}</AvatarFallback>
+          </Avatar>
+          <span>{name}</span>
+        </div>
+      ),
+      value: member?.userId?._id,
+    };
+  });
 
   const formSchema = z.object({
     title: z.string().trim().min(1, {
@@ -91,8 +141,38 @@ export default function CreateTaskForm(props: {
   const priorityOptions = transformOptions(taskPriorityList);
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    console.log(values, { workspaceId: workspaceId });
-    onClose();
+    if (isPending) return;
+    const payload = {
+      workspaceId,
+      projectId: values.projectId,
+      data: {
+        ...values,
+        dueDate: values.dueDate.toISOString(),
+      },
+    };
+
+    mutate(payload, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: ["project-analytics", projectId],
+        });
+
+        toast({
+          title: "Success",
+          description: "Task created successfully",
+          variant: "success",
+        });
+
+        onClose();
+      },
+      onError: (error) => {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      },
+    });
   };
 
   return (
@@ -132,7 +212,6 @@ export default function CreateTaskForm(props: {
                 )}
               />
             </div>
-
             {/* {Description} */}
             <div>
               <FormField
@@ -154,9 +233,7 @@ export default function CreateTaskForm(props: {
                 )}
               />
             </div>
-
             {/* {ProjectId} */}
-
             {!projectId && (
               <div>
                 <FormField
@@ -180,15 +257,19 @@ export default function CreateTaskForm(props: {
                               <Loader className="w-4 h-4 place-self-center flex animate-spin" />
                             </div>
                           )}
-                          <SelectItem value="m@example.com">
-                            m@example.com
-                          </SelectItem>
-                          <SelectItem value="m@google.com">
-                            m@google.com
-                          </SelectItem>
-                          <SelectItem value="m@support.com">
-                            m@support.com
-                          </SelectItem>
+                          <div className="w-full mx-h-[200px] overflow-y-auto scrollbar">
+                            {projectOptions?.map((option) => {
+                              return (
+                                <SelectItem
+                                  key={option.value}
+                                  className="!capitalize cursor-pointer"
+                                  value={option.value}
+                                >
+                                  {option.label}
+                                </SelectItem>
+                              );
+                            })}
+                          </div>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -197,9 +278,7 @@ export default function CreateTaskForm(props: {
                 />
               </div>
             )}
-
             {/* {Members AssigneeTo} */}
-
             <div>
               <FormField
                 control={form.control}
@@ -217,15 +296,19 @@ export default function CreateTaskForm(props: {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="m@example.com">
-                          m@example.com
-                        </SelectItem>
-                        <SelectItem value="m@google.com">
-                          m@google.com
-                        </SelectItem>
-                        <SelectItem value="m@support.com">
-                          m@support.com
-                        </SelectItem>
+                        <div className="w-full mx-h-[200px] overflow-y-auto scrollbar">
+                          {membersOptions?.map((option) => {
+                            return (
+                              <SelectItem
+                                key={option.value}
+                                className="!capitalize cursor-pointer"
+                                value={option.value}
+                              >
+                                {option.label}
+                              </SelectItem>
+                            );
+                          })}
+                        </div>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -233,7 +316,6 @@ export default function CreateTaskForm(props: {
                 )}
               />
             </div>
-
             {/* {Due Date} */}
             <div className="!mt-2">
               <FormField
@@ -283,9 +365,7 @@ export default function CreateTaskForm(props: {
                 )}
               />
             </div>
-
             {/* {Status} */}
-
             <div>
               <FormField
                 control={form.control}
@@ -322,7 +402,6 @@ export default function CreateTaskForm(props: {
                 )}
               />
             </div>
-
             {/* {Priority} */}
             <div>
               <FormField
@@ -357,12 +436,12 @@ export default function CreateTaskForm(props: {
                 )}
               />
             </div>
-
             <Button
               className="flex place-self-end  h-[40px] text-white font-semibold"
               type="submit"
+              disabled={isPending}
             >
-              <Loader className="animate-spin" />
+              {isPending && <Loader className="animate-spin" />}
               Create
             </Button>
           </form>
